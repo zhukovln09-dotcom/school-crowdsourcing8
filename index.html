@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Школьный Краудсорсинг</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <!-- Панель авторизации -->
+    <div id="authPanel" class="auth-panel">
+        <div class="auth-container">
+            <div class="auth-tabs">
+                <button class="auth-tab active" data-tab="login">Вход</button>
+                <button class="auth-tab" data-tab="register">Регистрация</button>
+            </div>
+            
+            <!-- Форма входа -->
+            <div id="loginForm" class="auth-form active">
+                <h2><i class="fas fa-sign-in-alt"></i> Вход в систему</h2>
+                <input type="email" id="loginEmail" placeholder="Email" required>
+                <input type="password" id="loginPassword" placeholder="Пароль" required>
+                <button id="loginBtn" class="btn btn-primary">
+                    <i class="fas fa-sign-in-alt"></i> Войти
+                </button>
+                <p class="auth-error" id="loginError"></p>
+                <p class="auth-switch">
+                    Нет аккаунта? <a href="#" onclick="showRegister()">Зарегистрироваться</a>
+                </p>
+            </div>
+            
+            <!-- Форма регистрации -->
+            <div id="registerForm" class="auth-form">
+                <h2><i class="fas fa-user-plus"></i> Регистрация</h2>
+                <input type="text" id="registerName" placeholder="Ваше имя" required>
+                <input type="email" id="registerEmail" placeholder="Email" required>
+                <input type="password" id="registerPassword" placeholder="Пароль (мин. 6 символов)" required>
+                <input type="password" id="registerConfirm" placeholder="Подтвердите пароль" required>
+                <select id="registerRole">
+                    <option value="student">Ученик</option>
+                    <option value="teacher">Учитель</option>
+                    <option value="parent">Родитель</option>
+                </select>
+                <button id="registerBtn" class="btn btn-success">
+                    <i class="fas fa-user-plus"></i> Зарегистрироваться
+                </button>
+                <p class="auth-error" id="registerError"></p>
+                <p class="auth-switch">
+                    Уже есть аккаунт? <a href="#" onclick="showLogin()">Войти</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Основное приложение (скрыто до авторизации) -->
+    <div id="app" class="app-container" style="display: none;">
+        <!-- Шапка с информацией о пользователе -->
+        <header class="app-header">
+            <div class="header-content">
+                <div class="header-left">
+                    <h1><i class="fas fa-lightbulb"></i> Школьный Краудсорсинг</h1>
+                    <p class="subtitle">Предлагайте идеи, голосуйте и улучшайте нашу школу вместе!</p>
+                </div>
+                <div class="header-right">
+                    <div class="user-info">
+                        <span id="userName">Гость</span>
+                        <span id="userRole" class="user-role">гость</span>
+                    </div>
+                    <button id="logoutBtn" class="btn btn-secondary">
+                        <i class="fas fa-sign-out-alt"></i> Выйти
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="app-main">
+            <!-- Форма для добавления идеи -->
+            <section class="idea-form-section">
+                <h2><i class="fas fa-plus-circle"></i> Предложить новую идею</h2>
+                <div class="idea-form">
+                    <input type="text" id="ideaTitle" placeholder="Название идеи" required>
+                    <textarea id="ideaDescription" placeholder="Опишите вашу идею подробнее..." rows="4" required></textarea>
+                    <select id="ideaCategory">
+                        <option value="general">Общее</option>
+                        <option value="education">Учёба</option>
+                        <option value="sports">Спорт</option>
+                        <option value="food">Питание</option>
+                        <option value="facility">Инфраструктура</option>
+                        <option value="events">Мероприятия</option>
+                    </select>
+                    <button id="submitIdeaBtn" class="btn btn-primary">
+                        <i class="fas fa-paper-plane"></i> Опубликовать идею
+                    </button>
+                </div>
+            </section>
+
+            <!-- Фильтры и сортировка -->
+            <section class="filters-section">
+                <div class="filters">
+                    <select id="filterCategory">
+                        <option value="all">Все категории</option>
+                        <option value="general">Общее</option>
+                        <option value="education">Учёба</option>
+                        <option value="sports">Спорт</option>
+                        <option value="food">Питание</option>
+                        <option value="facility">Инфраструктура</option>
+                        <option value="events">Мероприятия</option>
+                    </select>
+                    
+                    <select id="filterStatus">
+                        <option value="all">Все статусы</option>
+                        <option value="pending">На рассмотрении</option>
+                        <option value="approved">Одобрено</option>
+                        <option value="in_progress">В работе</option>
+                        <option value="completed">Реализовано</option>
+                    </select>
+                    
+                    <select id="sortBy">
+                        <option value="newest">Сначала новые</option>
+                        <option value="popular">По популярности</option>
+                        <option value="votes">По голосам</option>
+                        <option value="comments">По комментариям</option>
+                    </select>
+                    
+                    <button id="applyFilters" class="btn btn-secondary">
+                        <i class="fas fa-filter"></i> Применить
+                    </button>
+                </div>
+            </section>
+
+            <!-- Список идей -->
+            <section class="ideas-section">
+                <h2><i class="fas fa-list"></i> Все идеи</h2>
+                <div id="ideasContainer" class="ideas-container">
+                    <div class="loading">
+                        <i class="fas fa-spinner fa-spin"></i> Загрузка идей...
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Модальное окно для комментариев -->
+        <div id="commentModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h3 id="modalTitle">Комментарии</h3>
+                <div class="comments-section">
+                    <div id="commentsContainer" class="comments-container"></div>
+                    <form id="commentForm" class="comment-form">
+                        <textarea id="commentText" placeholder="Ваш комментарий..." rows="3" required></textarea>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-comment"></i> Добавить комментарий
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Модальное окно для деталей идеи -->
+        <div id="ideaDetailsModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <div id="ideaDetailsContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Подключение скриптов -->
+    <script src="firebase-config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
